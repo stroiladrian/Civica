@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Travel Map with Overlay</title>
+  <title>Working Travel Map</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -10,7 +10,6 @@
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      -webkit-tap-highlight-color: transparent;
     }
     #map {
       width: 100vw;
@@ -18,190 +17,157 @@
       background: #f0f0f0;
     }
     
-    /* Overlay styling */
+    /* Overlay */
     #overlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 50%;
-      background-color: rgba(0, 0, 0, 0.8);
+      background: rgba(0,0,0,0.8);
       z-index: 1000;
       display: none;
-      padding: 20px;
+      padding: 15px;
       box-sizing: border-box;
-      overflow-y: auto;
     }
     
     .overlay-content {
       background: white;
       border-radius: 10px;
       padding: 15px;
-      max-width: 100%;
-      height: calc(100% - 40px);
+      height: calc(100% - 30px);
       overflow-y: auto;
     }
     
-    .close-overlay {
+    .close-btn {
       position: absolute;
       top: 10px;
       right: 10px;
       background: white;
       border: none;
-      border-radius: 50%;
       width: 30px;
       height: 30px;
-      font-size: 16px;
+      border-radius: 50%;
+      font-size: 18px;
       cursor: pointer;
-      z-index: 1001;
     }
     
-    /* Pin styling - now actually visible */
+    /* Pins - now definitely visible */
     .map-pin {
+      background: red;
       width: 24px;
       height: 24px;
-      margin-left: -12px !important;
-      margin-top: -12px !important;
-      background: #ff4757;
       border-radius: 50% 50% 50% 0;
       transform: rotate(-45deg);
       position: relative;
     }
     .map-pin::after {
       content: '';
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
       background: white;
       position: absolute;
-      top: 7px;
-      left: 7px;
+      top: 6px;
+      left: 6px;
       border-radius: 50%;
     }
     
-    /* Popup content styling */
     .popup-img {
       max-width: 100%;
-      height: auto;
       border-radius: 8px;
-      margin-bottom: 8px;
-    }
-    .comment {
-      margin: 6px 0;
-      padding: 8px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      font-size: 14px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="overlay">
-    <button class="close-overlay" onclick="closeOverlay()">×</button>
+    <button class="close-btn" onclick="closeOverlay()">×</button>
     <div class="overlay-content" id="overlay-content"></div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // Initialize map
-    const map = L.map('map', {
-      tap: false
-    }).setView([51.505, -0.09], 15); // Default view
-
-    // Add OpenStreetMap tiles
+    const map = L.map('map');
+    let userLocation = [51.505, -0.09]; // Default to London
+    
+    // Custom pin icon
+    const pinIcon = L.divIcon({
+      className: 'map-pin',
+      iconSize: [24, 24],
+      popupAnchor: [0, -10]
+    });
+    
+    // Add base map
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(map);
-
-    // Custom pin icon - now properly defined
-    const pinIcon = L.divIcon({
-      className: 'map-pin',
-      iconSize: [24, 24]
-    });
-
-    // Sample data with visible pins
-    const locations = [
-      {
-        id: 1,
-        coords: [51.505, -0.09],
-        image: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383',
-        comments: ["Beautiful park!", "Great for picnics."],
-        title: "Central Park"
-      },
-      {
-        id: 2,
-        coords: [51.51, -0.1],
-        image: 'https://images.unsplash.com/photo-1500380804539-4e1e8c1e7118',
-        comments: ["Iconic landmark!"],
-        title: "London Tower"
-      },
-      {
-        id: 3,
-        coords: [51.515, -0.08],
-        image: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383',
-        comments: ["Great museum!"],
-        title: "Museum"
-      }
-    ];
-
-    // Add markers to map - THIS WAS MISSING IN PREVIOUS VERSION
-    locations.forEach(loc => {
-      const marker = L.marker(loc.coords, { 
-        icon: pinIcon,
-        riseOnHover: true
-      }).addTo(map);
+    
+    // Get user location first
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLocation = [pos.coords.latitude, pos.coords.longitude];
+          initMap();
+        },
+        (err) => {
+          console.log("Geolocation error:", err);
+          initMap();
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      initMap();
+    }
+    
+    function initMap() {
+      // Set view to user location (or default)
+      map.setView(userLocation, 15);
       
-      // Show overlay when marker is clicked
-      marker.on('click', function() {
-        showOverlay(loc);
+      // Add sample pins around user location
+      const pins = [
+        {
+          coords: [userLocation[0] + 0.005, userLocation[1] + 0.005],
+          title: "Park",
+          image: "https://images.unsplash.com/photo-1529655683826-aba9b3e77383",
+          comments: ["Nice place!"]
+        },
+        {
+          coords: [userLocation[0] - 0.005, userLocation[1] - 0.005], 
+          title: "Museum",
+          image: "https://images.unsplash.com/photo-1500380804539-4e1e8c1e7118",
+          comments: ["Great exhibits!"]
+        }
+      ];
+      
+      // Add markers to map
+      pins.forEach(pin => {
+        const marker = L.marker(pin.coords, { icon: pinIcon }).addTo(map);
+        marker.on('click', () => showOverlay(pin));
       });
-    });
-
-    // Show overlay with location details
-    function showOverlay(location) {
+    }
+    
+    function showOverlay(pin) {
       const overlay = document.getElementById('overlay');
       const content = document.getElementById('overlay-content');
       
       content.innerHTML = `
-        <h2 style="margin-top: 0;">${location.title || 'Location'}</h2>
-        <img src="${location.image}" class="popup-img"/>
-        <div id="overlay-comments">
-          ${location.comments.map(c => `<div class="comment">${c}</div>`).join('')}
-        </div>
-        <input type="text" id="new-comment" placeholder="Add comment..." style="width: 100%; padding: 8px; margin-top: 10px;"/>
-        <button onclick="addComment()" style="width: 100%; padding: 10px; margin-top: 5px; background: #4CAF50; color: white; border: none; border-radius: 5px;">Post Comment</button>
+        <h2>${pin.title}</h2>
+        <img src="${pin.image}" class="popup-img">
+        <div>${pin.comments.join('<br>')}</div>
+        <input type="text" placeholder="Add comment" style="width:100%;padding:8px;margin-top:10px;">
+        <button style="width:100%;padding:8px;margin-top:5px;background:#4CAF50;color:white;border:none;">Post</button>
       `;
       
       overlay.style.display = 'block';
       map.invalidateSize();
     }
-
-    // Close overlay
+    
     function closeOverlay() {
       document.getElementById('overlay').style.display = 'none';
       map.invalidateSize();
     }
-
-    // Add comment
-    function addComment() {
-      const input = document.getElementById('new-comment');
-      const comment = input.value.trim();
-      
-      if (comment) {
-        const commentsDiv = document.getElementById('overlay-comments');
-        commentsDiv.innerHTML += `<div class="comment">${comment}</div>`;
-        input.value = '';
-        
-        if (window.navigator.vibrate) {
-          window.navigator.vibrate(50);
-        }
-      }
-    }
-
-    // Handle window resize
-    window.addEventListener('resize', () => {
-      map.invalidateSize();
-    });
   </script>
 </body>
 </html>
