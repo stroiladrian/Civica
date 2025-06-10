@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Travel Photo Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { width: 100vw; height: 100vh; background: #f0f0f0; } /* Fallback color */
+    .popup-img { max-width: 200px; border-radius: 8px; }
+    .comment { margin: 4px 0; padding: 4px; background: #f0f0f0; }
+    /* Custom red pin */
+    .custom-pin {
+      width: 30px !important;
+      height: 30px !important;
+      margin-left: -15px !important;
+      margin-top: -15px !important;
+      background: red;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      position: relative;
+    }
+    .custom-pin::after {
+      content: '';
+      width: 14px;
+      height: 14px;
+      background: white;
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Custom red pin icon
+    const redPin = L.divIcon({
+      className: 'custom-pin',
+      iconSize: [30, 30]
+    });
+
+    // Initialize map
+    const map = L.map('map');
+    
+    // Add OpenStreetMap tiles (CORRECTED URL)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map).on('tileerror', () => {
+      console.error("Failed to load map tiles!");
+      alert("Map tiles couldn't load. Check your internet connection or disable ad-blockers.");
+    });
+
+    // Try to center on user's location (zoom 15)
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+          addSamplePins(pos.coords.latitude, pos.coords.longitude);
+        },
+        (error) => {
+          console.error("Geolocation failed:", error);
+          map.setView([51.505, -0.09], 15); // Fallback to London
+          addSamplePins(51.505, -0.09);
+        }
+      );
+    } else {
+      map.setView([51.505, -0.09], 15); // Fallback if geolocation unsupported
+      addSamplePins(51.505, -0.09);
+    }
+
+    // Add sample pins
+    function addSamplePins(centerLat, centerLng) {
+      const locations = [
+        {
+          id: 1,
+          coords: [centerLat + 0.005, centerLng + 0.005],
+          image: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383',
+          comments: ["Beautiful park!", "Great for picnics."]
+        },
+        {
+          id: 2,
+          coords: [centerLat - 0.005, centerLng - 0.005],
+          image: 'https://images.unsplash.com/photo-1500380804539-4e1e8c1e7118',
+          comments: ["Iconic landmark!"]
+        }
+      ];
+
+      locations.forEach(loc => {
+        const marker = L.marker(loc.coords, { icon: redPin }).addTo(map);
+        marker.bindPopup(`
+          <img src="${loc.image}" class="popup-img"/>
+          <div id="comments-${loc.id}">
+            ${loc.comments.map(c => `<div class="comment">${c}</div>`).join('')}
+          </div>
+          <input type="text" id="new-comment-${loc.id}" placeholder="Add comment..."/>
+          <button onclick="addComment(${loc.id})">Post</button>
+        `);
+      });
+    }
+
+    // Mock comment function
+    window.addComment = function(locId) {
+      const input = document.getElementById(`new-comment-${locId}`);
+      const commentsDiv = document.getElementById(`comments-${locId}`);
+      commentsDiv.innerHTML += `<div class="comment">${input.value}</div>`;
+      input.value = '';
+    };
+  </script>
+</body>
+</html>
