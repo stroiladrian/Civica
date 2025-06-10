@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Travel Map - Larger Pins</title>
+  <title>Travel Map - Sonar Pins</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -54,17 +54,28 @@
       z-index: 1001;
     }
     
-    /* PINS 30% LARGER (original 24px → ~31px) */
+    /* PINS WITH SONAR EFFECT */
+    .pin-container {
+      position: relative;
+      width: 60px;
+      height: 60px;
+      pointer-events: none;
+    }
+    
     .map-pin {
+      position: absolute;
+      top: 50%;
+      left: 50%;
       background: #ff4757;
       width: 31px;
       height: 31px;
-      margin-left: -15.5px !important;
-      margin-top: -15.5px !important;
+      margin-left: -15.5px;
+      margin-top: -15.5px;
       border-radius: 50% 50% 50% 0;
       transform: rotate(-45deg);
-      position: relative;
+      z-index: 10;
     }
+    
     .map-pin::after {
       content: '';
       width: 15px;
@@ -74,6 +85,40 @@
       top: 8px;
       left: 8px;
       border-radius: 50%;
+    }
+    
+    .sonar-circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      margin-left: -5px;
+      margin-top: -5px;
+      border-radius: 50%;
+      background: rgba(255, 71, 87, 0.5);
+      transform: scale(0);
+      animation: sonar 3s infinite;
+      z-index: 1;
+    }
+    
+    .sonar-circle:nth-child(2) {
+      animation-delay: 1s;
+    }
+    
+    .sonar-circle:nth-child(3) {
+      animation-delay: 2s;
+    }
+    
+    @keyframes sonar {
+      0% {
+        transform: scale(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(6);
+        opacity: 0;
+      }
     }
     
     .popup-img {
@@ -111,12 +156,25 @@
     let userLocation = null;
     const loadingElement = document.getElementById('loading');
     
-    // Custom pin icon (30% larger)
-    const pinIcon = L.divIcon({
-      className: 'map-pin',
-      iconSize: [31, 31],  // Increased from 24px
-      iconAnchor: [15.5, 15.5]  // Center of the icon
-    });
+    // Create custom pin with sonar effect
+    function createSonarPin() {
+      const container = L.DomUtil.create('div', 'pin-container');
+      
+      // Create the main pin
+      const pin = L.DomUtil.create('div', 'map-pin', container);
+      
+      // Create 3 sonar circles
+      for (let i = 0; i < 3; i++) {
+        L.DomUtil.create('div', 'sonar-circle', container);
+      }
+      
+      return L.divIcon({
+        html: container,
+        iconSize: [60, 60],
+        iconAnchor: [30, 30],
+        className: 'sonar-pin-icon'
+      });
+    }
     
     // Add base map
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -176,10 +234,10 @@
         }
       ];
       
-      // Add markers to map with larger pins
+      // Add markers to map with sonar effect
       pins.forEach(pin => {
         const marker = L.marker(pin.coords, { 
-          icon: pinIcon,
+          icon: createSonarPin(),
           riseOnHover: true
         }).addTo(map);
         
