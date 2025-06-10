@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Travel Map - Bottom Overlay</title>
+  <title>Travel Map - Larger Pins</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -54,23 +54,25 @@
       z-index: 1001;
     }
     
-    /* Pins */
+    /* PINS 30% LARGER (original 24px → ~31px) */
     .map-pin {
       background: #ff4757;
-      width: 24px;
-      height: 24px;
+      width: 31px;
+      height: 31px;
+      margin-left: -15.5px !important;
+      margin-top: -15.5px !important;
       border-radius: 50% 50% 50% 0;
       transform: rotate(-45deg);
       position: relative;
     }
     .map-pin::after {
       content: '';
-      width: 12px;
-      height: 12px;
+      width: 15px;
+      height: 15px;
       background: white;
       position: absolute;
-      top: 6px;
-      left: 6px;
+      top: 8px;
+      left: 8px;
       border-radius: 50%;
     }
     
@@ -109,10 +111,11 @@
     let userLocation = null;
     const loadingElement = document.getElementById('loading');
     
-    // Custom pin icon
+    // Custom pin icon (30% larger)
     const pinIcon = L.divIcon({
       className: 'map-pin',
-      iconSize: [24, 24]
+      iconSize: [31, 31],  // Increased from 24px
+      iconAnchor: [15.5, 15.5]  // Center of the icon
     });
     
     // Add base map
@@ -173,7 +176,7 @@
         }
       ];
       
-      // Add markers to map
+      // Add markers to map with larger pins
       pins.forEach(pin => {
         const marker = L.marker(pin.coords, { 
           icon: pinIcon,
@@ -209,7 +212,7 @@
       `;
       
       overlay.style.display = 'block';
-      map.invalidateSize(); // Refresh map to account for overlay
+      map.invalidateSize();
     }
     
     function postComment() {
@@ -220,14 +223,13 @@
         commentsDiv.innerHTML += `<div class="comment">${comment}</div>`;
         input.value = '';
         
-        // Small vibration feedback on mobile
         if (navigator.vibrate) navigator.vibrate(50);
       }
     }
     
     function closeOverlay() {
       document.getElementById('overlay').style.display = 'none';
-      map.invalidateSize(); // Refresh map
+      map.invalidateSize();
     }
   </script>
 </body>
