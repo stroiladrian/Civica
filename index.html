@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Working Travel Map</title>
+  <title>Travel Map - Bottom Pins</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -10,6 +10,7 @@
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
     }
     #map {
       width: 100vw;
@@ -17,10 +18,10 @@
       background: #f0f0f0;
     }
     
-    /* Overlay */
+    /* Overlay at BOTTOM */
     #overlay {
       position: fixed;
-      top: 0;
+      bottom: 0;
       left: 0;
       width: 100%;
       height: 50%;
@@ -52,9 +53,9 @@
       cursor: pointer;
     }
     
-    /* Pins - now definitely visible */
+    /* Visible pins */
     .map-pin {
-      background: red;
+      background: #ff4757;
       width: 24px;
       height: 24px;
       border-radius: 50% 50% 50% 0;
@@ -74,8 +75,21 @@
     
     .popup-img {
       max-width: 100%;
+      max-height: 150px;
       border-radius: 8px;
       margin-bottom: 10px;
+      display: block;
+    }
+    
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 1001;
     }
   </style>
 </head>
@@ -85,18 +99,19 @@
     <button class="close-btn" onclick="closeOverlay()">×</button>
     <div class="overlay-content" id="overlay-content"></div>
   </div>
+  <div class="loading" id="loading">Detecting your location...</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // Initialize map
     const map = L.map('map');
-    let userLocation = [51.505, -0.09]; // Default to London
+    let userLocation = null;
+    const loadingElement = document.getElementById('loading');
     
     // Custom pin icon
     const pinIcon = L.divIcon({
       className: 'map-pin',
-      iconSize: [24, 24],
-      popupAnchor: [0, -10]
+      iconSize: [24, 24]
     });
     
     // Add base map
@@ -110,41 +125,65 @@
         (pos) => {
           userLocation = [pos.coords.latitude, pos.coords.longitude];
           initMap();
+          loadingElement.style.display = 'none';
         },
         (err) => {
           console.log("Geolocation error:", err);
+          alert("Couldn't get your location. Using default.");
+          userLocation = [51.505, -0.09]; // London fallback
           initMap();
+          loadingElement.style.display = 'none';
         },
-        { timeout: 5000 }
+        { 
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
       );
     } else {
+      userLocation = [51.505, -0.09]; // London fallback
       initMap();
+      loadingElement.style.display = 'none';
     }
     
     function initMap() {
-      // Set view to user location (or default)
+      // Set view to user location
       map.setView(userLocation, 15);
       
-      // Add sample pins around user location
+      // Add sample pins NORTH of user location (so overlay won't cover them)
       const pins = [
         {
-          coords: [userLocation[0] + 0.005, userLocation[1] + 0.005],
-          title: "Park",
+          coords: [userLocation[0] + 0.01, userLocation[1]], // North
+          title: "Park Area",
           image: "https://images.unsplash.com/photo-1529655683826-aba9b3e77383",
-          comments: ["Nice place!"]
+          comments: ["Great walking trails!", "Beautiful scenery"]
         },
         {
-          coords: [userLocation[0] - 0.005, userLocation[1] - 0.005], 
+          coords: [userLocation[0] + 0.01, userLocation[1] + 0.01], // Northeast
           title: "Museum",
           image: "https://images.unsplash.com/photo-1500380804539-4e1e8c1e7118",
-          comments: ["Great exhibits!"]
+          comments: ["Free entry on Sundays"]
+        },
+        {
+          coords: [userLocation[0] + 0.01, userLocation[1] - 0.01], // Northwest
+          title: "Cafe",
+          image: "https://images.unsplash.com/photo-1445116572660-236099ec97a0",
+          comments: ["Best coffee in town!"]
         }
       ];
       
       // Add markers to map
       pins.forEach(pin => {
-        const marker = L.marker(pin.coords, { icon: pinIcon }).addTo(map);
-        marker.on('click', () => showOverlay(pin));
+        const marker = L.marker(pin.coords, { 
+          icon: pinIcon,
+          riseOnHover: true
+        }).addTo(map);
+        
+        marker.on('click', () => {
+          // Center map on pin but keep zoom
+          map.setView(marker.getLatLng(), map.getZoom());
+          showOverlay(pin);
+        });
       });
     }
     
@@ -153,15 +192,30 @@
       const content = document.getElementById('overlay-content');
       
       content.innerHTML = `
-        <h2>${pin.title}</h2>
+        <h2 style="margin-top: 0;">${pin.title}</h2>
         <img src="${pin.image}" class="popup-img">
-        <div>${pin.comments.join('<br>')}</div>
-        <input type="text" placeholder="Add comment" style="width:100%;padding:8px;margin-top:10px;">
-        <button style="width:100%;padding:8px;margin-top:5px;background:#4CAF50;color:white;border:none;">Post</button>
+        <div style="margin-bottom: 15px;">
+          ${pin.comments.map(c => `<div class="comment">${c}</div>`).join('')}
+        </div>
+        <input type="text" id="new-comment" placeholder="Add your comment..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        <button onclick="postComment()" style="width: 100%; padding: 10px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; font-weight: bold;">Post Comment</button>
       `;
       
       overlay.style.display = 'block';
       map.invalidateSize();
+    }
+    
+    function postComment() {
+      const input = document.getElementById('new-comment');
+      const comment = input.value.trim();
+      if (comment) {
+        const commentsDiv = document.querySelector('#overlay-content div');
+        commentsDiv.innerHTML += `<div class="comment">${comment}</div>`;
+        input.value = '';
+        
+        // Small vibration feedback on mobile
+        if (navigator.vibrate) navigator.vibrate(50);
+      }
     }
     
     function closeOverlay() {
