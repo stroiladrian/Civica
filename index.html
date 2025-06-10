@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mobile Travel Map</title>
+  <title>Travel Map with Overlay</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -17,11 +17,68 @@
       height: 100vh;
       background: #f0f0f0;
     }
-    /* Responsive popup styling */
-    .leaflet-popup-content {
-      width: auto !important;
-      max-width: 300px;
+    
+    /* Overlay styling */
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50%; /* Cover 50% of the map */
+      background-color: rgba(0, 0, 0, 0.8); /* 80% opacity black */
+      z-index: 1000;
+      display: none;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
     }
+    
+    .overlay-content {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      max-width: 100%;
+      height: calc(100% - 40px);
+      overflow-y: auto;
+    }
+    
+    .close-overlay {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 1001;
+    }
+    
+    /* Pin styling */
+    .dynamic-pin {
+      width: 24px;
+      height: 24px;
+      margin-left: -12px !important;
+      margin-top: -12px !important;
+      background: #ff4757;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      position: relative;
+    }
+    .dynamic-pin::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      background: white;
+      position: absolute;
+      top: 7px;
+      left: 7px;
+      border-radius: 50%;
+    }
+    
+    /* Popup content styling */
     .popup-img {
       max-width: 100%;
       height: auto;
@@ -34,143 +91,66 @@
       background: #f8f9fa;
       border-radius: 6px;
       font-size: 14px;
-      line-height: 1.4;
-    }
-    .comment-input {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0 4px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 15px;
-    }
-    .comment-button {
-      width: 100%;
-      padding: 10px;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 15px;
-      font-weight: 500;
-    }
-    
-    /* Dynamic pin sizing */
-    .dynamic-pin {
-      width: 24px;
-      height: 24px;
-      margin-left: -12px !important;
-      margin-top: -12px !important;
-      background: #ff4757;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      position: relative;
-      transition: all 0.2s ease;
-    }
-    .dynamic-pin::after {
-      content: '';
-      width: 10px;
-      height: 10px;
-      background: white;
-      position: absolute;
-      top: 7px;
-      left: 7px;
-      border-radius: 50%;
-    }
-    /* Make pins larger when active */
-    .dynamic-pin.active {
-      width: 32px;
-      height: 32px;
-      margin-left: -16px !important;
-      margin-top: -16px !important;
-      z-index: 1000;
-    }
-    .dynamic-pin.active::after {
-      width: 14px;
-      height: 14px;
-      top: 9px;
-      left: 9px;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div id="overlay">
+    <button class="close-overlay" onclick="closeOverlay()">×</button>
+    <div class="overlay-content" id="overlay-content"></div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Initialize map with mobile-friendly settings
+    // Initialize map
     const map = L.map('map', {
-      tap: false, // Fixes 300ms delay on some devices
-      zoomControl: false // We'll add custom zoom control
+      tap: false
     });
-    
-    // Add touch-friendly zoom controls
-    L.control.zoom({
-      position: 'bottomright'
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // Dynamic pin icon with active state
+    // Pin icon
     const pinIcon = L.divIcon({
       className: 'dynamic-pin',
       iconSize: [24, 24]
     });
 
-    const activePinIcon = L.divIcon({
-      className: 'dynamic-pin active',
-      iconSize: [32, 32]
-    });
-
-    // Add OpenStreetMap tiles with retina support for mobile
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-      detectRetina: true // Better rendering on high-DPI screens
-    }).addTo(map);
-
-    // Mobile-optimized sample data
+    // Sample data
     const locations = [
       {
         id: 1,
         coords: [51.505, -0.09],
-        image: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383?w=600',
-        comments: ["Beautiful park!", "Great for picnics."]
+        image: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383',
+        comments: ["Beautiful park!", "Great for picnics."],
+        title: "Central Park"
       },
       {
         id: 2,
         coords: [51.51, -0.1],
-        image: 'https://images.unsplash.com/photo-1500380804539-4e1e8c1e7118?w=600',
-        comments: ["Iconic landmark!"]
+        image: 'https://images.unsplash.com/photo-1500380804539-4e1e8c1e7118',
+        comments: ["Iconic landmark!"],
+        title: "London Tower"
       }
     ];
 
-    // Add markers with mobile-friendly interactions
+    // Add markers to map
     locations.forEach(loc => {
       const marker = L.marker(loc.coords, { 
         icon: pinIcon,
         riseOnHover: true
       }).addTo(map);
       
-      // Make pin bigger when tapped
+      // Bind click event to show overlay
       marker.on('click', function() {
-        this.setIcon(activePinIcon);
-        setTimeout(() => this.setIcon(pinIcon), 1000);
-      });
-
-      marker.bindPopup(`
-        <div style="max-width:280px">
-          <img src="${loc.image}" class="popup-img" loading="lazy"/>
-          <div id="comments-${loc.id}">
-            ${loc.comments.map(c => `<div class="comment">${c}</div>`).join('')}
-          </div>
-          <input type="text" class="comment-input" id="new-comment-${loc.id}" placeholder="Add comment..."/>
-          <button class="comment-button" onclick="addComment(${loc.id})">Post Comment</button>
-        </div>
-      `, {
-        maxWidth: 300,
-        minWidth: 200,
-        className: 'mobile-popup'
+        showOverlay(loc);
       });
     });
 
-    // Center map on user location with mobile-appropriate zoom
+    // Center map on user location or fallback
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         pos => {
@@ -178,33 +158,53 @@
         },
         () => {
           map.setView([51.505, -0.09], 15); // Fallback to London
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
         }
       );
     } else {
       map.setView([51.505, -0.09], 15);
     }
 
-    // Mobile-friendly comment function
-    window.addComment = function(locId) {
-      const input = document.getElementById(`new-comment-${locId}`);
+    // Show overlay with location details
+    function showOverlay(location) {
+      const overlay = document.getElementById('overlay');
+      const content = document.getElementById('overlay-content');
+      
+      content.innerHTML = `
+        <h2>${location.title || 'Location'}</h2>
+        <img src="${location.image}" class="popup-img"/>
+        <div id="overlay-comments">
+          ${location.comments.map(c => `<div class="comment">${c}</div>`).join('')}
+        </div>
+        <input type="text" id="new-comment" placeholder="Add comment..." style="width: 100%; padding: 8px; margin-top: 10px;"/>
+        <button onclick="addComment()" style="width: 100%; padding: 10px; margin-top: 5px; background: #4CAF50; color: white; border: none; border-radius: 5px;">Post Comment</button>
+      `;
+      
+      overlay.style.display = 'block';
+      map.invalidateSize(); // Refresh map to account for overlay
+    }
+
+    // Close overlay
+    function closeOverlay() {
+      document.getElementById('overlay').style.display = 'none';
+      map.invalidateSize(); // Refresh map
+    }
+
+    // Add comment (mock function)
+    function addComment() {
+      const input = document.getElementById('new-comment');
       const comment = input.value.trim();
       
       if (comment) {
-        const commentsDiv = document.getElementById(`comments-${locId}`);
+        const commentsDiv = document.getElementById('overlay-comments');
         commentsDiv.innerHTML += `<div class="comment">${comment}</div>`;
         input.value = '';
         
-        // Small vibration feedback on mobile
+        // Small vibration feedback on mobile if available
         if (window.navigator.vibrate) {
           window.navigator.vibrate(50);
         }
       }
-    };
+    }
 
     // Handle window resize
     window.addEventListener('resize', () => {
