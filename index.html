@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Travel Map - Bottom Pins</title>
+  <title>Travel Map - Bottom Overlay</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -18,7 +18,7 @@
       background: #f0f0f0;
     }
     
-    /* Overlay at BOTTOM */
+    /* OVERLAY AT BOTTOM */
     #overlay {
       position: fixed;
       bottom: 0;
@@ -34,7 +34,7 @@
     
     .overlay-content {
       background: white;
-      border-radius: 10px;
+      border-radius: 10px 10px 0 0;
       padding: 15px;
       height: calc(100% - 30px);
       overflow-y: auto;
@@ -51,9 +51,10 @@
       border-radius: 50%;
       font-size: 18px;
       cursor: pointer;
+      z-index: 1001;
     }
     
-    /* Visible pins */
+    /* Pins */
     .map-pin {
       background: #ff4757;
       width: 24px;
@@ -150,25 +151,25 @@
       // Set view to user location
       map.setView(userLocation, 15);
       
-      // Add sample pins NORTH of user location (so overlay won't cover them)
+      // Add sample pins AROUND user location
       const pins = [
         {
-          coords: [userLocation[0] + 0.01, userLocation[1]], // North
-          title: "Park Area",
+          coords: [userLocation[0] + 0.005, userLocation[1]], // North
+          title: "Park",
           image: "https://images.unsplash.com/photo-1529655683826-aba9b3e77383",
-          comments: ["Great walking trails!", "Beautiful scenery"]
+          comments: ["Beautiful greenery!", "Great for picnics"]
         },
         {
-          coords: [userLocation[0] + 0.01, userLocation[1] + 0.01], // Northeast
+          coords: [userLocation[0] - 0.005, userLocation[1]], // South
+          title: "Shopping Center",
+          image: "https://images.unsplash.com/photo-1486401899868-0e435ed85128",
+          comments: ["Good variety of stores"]
+        },
+        {
+          coords: [userLocation[0], userLocation[1] + 0.005], // East
           title: "Museum",
           image: "https://images.unsplash.com/photo-1500380804539-4e1e8c1e7118",
           comments: ["Free entry on Sundays"]
-        },
-        {
-          coords: [userLocation[0] + 0.01, userLocation[1] - 0.01], // Northwest
-          title: "Cafe",
-          image: "https://images.unsplash.com/photo-1445116572660-236099ec97a0",
-          comments: ["Best coffee in town!"]
         }
       ];
       
@@ -180,9 +181,9 @@
         }).addTo(map);
         
         marker.on('click', () => {
-          // Center map on pin but keep zoom
-          map.setView(marker.getLatLng(), map.getZoom());
           showOverlay(pin);
+          // Center map on marker but keep current zoom
+          map.setView(marker.getLatLng(), map.getZoom());
         });
       });
     }
@@ -197,12 +198,18 @@
         <div style="margin-bottom: 15px;">
           ${pin.comments.map(c => `<div class="comment">${c}</div>`).join('')}
         </div>
-        <input type="text" id="new-comment" placeholder="Add your comment..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-        <button onclick="postComment()" style="width: 100%; padding: 10px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; font-weight: bold;">Post Comment</button>
+        <input type="text" id="new-comment" placeholder="Add your comment..." 
+               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        <button onclick="postComment()" 
+                style="width: 100%; padding: 10px; margin-top: 10px; 
+                       background: #4CAF50; color: white; border: none; 
+                       border-radius: 5px; font-weight: bold;">
+          Post Comment
+        </button>
       `;
       
       overlay.style.display = 'block';
-      map.invalidateSize();
+      map.invalidateSize(); // Refresh map to account for overlay
     }
     
     function postComment() {
@@ -220,7 +227,7 @@
     
     function closeOverlay() {
       document.getElementById('overlay').style.display = 'none';
-      map.invalidateSize();
+      map.invalidateSize(); // Refresh map
     }
   </script>
 </body>
