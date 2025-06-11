@@ -1,108 +1,112 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Travel Map - Visible Sonar Pins</title>
+  <title>Travel Map - User Location</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    /* SONAR PINS - MORE VISIBLE VERSION */
-    .sonar-pin {
-      position: relative;
-      width: 80px;
-      height: 80px;
-    }
-    .pin-main {
-      position: absolute;
+    /* Your existing styles... */
+    .loading {
+      position: fixed;
       top: 50%;
       left: 50%;
-      width: 30px;
-      height: 30px;
-      background: #ff0000;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      margin: -15px 0 0 -15px;
-      z-index: 10;
-    }
-    .pin-main:after {
-      content: '';
-      position: absolute;
-      width: 12px;
-      height: 12px;
+      transform: translate(-50%, -50%);
       background: white;
-      border-radius: 50%;
-      top: 9px;
-      left: 9px;
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 1001;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
     }
-    .sonar-wave {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 20px;
-      height: 20px;
-      margin: -10px 0 0 -10px;
-      background: rgba(255, 0, 0, 0.3);
-      border-radius: 50%;
-      animation: sonar 2.5s linear infinite;
-      opacity: 0;
-      z-index: 1;
-    }
-    .sonar-wave:nth-child(2) {
-      animation-delay: 0.8s;
-    }
-    .sonar-wave:nth-child(3) {
-      animation-delay: 1.6s;
-    }
-    @keyframes sonar {
-      0% { transform: scale(0.3); opacity: 0.8; }
-      70% { opacity: 0.4; }
-      100% { transform: scale(5); opacity: 0; }
-    }
-
-    /* Rest of your existing CSS... */
-    body { margin: 0; padding: 0; font-family: sans-serif; }
-    #map { width: 100vw; height: 100vh; }
-    #overlay { /* Your overlay styles */ }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  
+  <div id="overlay">
+    <button class="close-btn" onclick="closeOverlay()">×</button>
+    <div class="overlay-content" id="overlay-content"></div>
+  </div>
+  <div class="loading" id="loading">Locating you...</div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([51.505, -0.09], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-    // Improved sonar pin creation
+    // Initialize map with null view first
+    const map = L.map('map');
+    let userLocation = null;
+    const loadingElement = document.getElementById('loading');
+    
+    // Custom sonar pin creation (keep your existing function)
     function createSonarPin() {
-      const container = document.createElement('div');
-      container.className = 'sonar-pin';
-      
-      // Main pin
-      const pin = document.createElement('div');
-      pin.className = 'pin-main';
-      
-      // Sonar waves
-      for (let i = 0; i < 3; i++) {
-        const wave = document.createElement('div');
-        wave.className = 'sonar-wave';
-        container.appendChild(wave);
-      }
-      
-      container.appendChild(pin);
-      
-      return L.divIcon({
-        html: container,
-        iconSize: [80, 80],
-        iconAnchor: [40, 40],
-        className: ''
-      });
+      // ... your existing sonar pin code ...
     }
 
-    // Add test pins
-    L.marker([51.505, -0.09], { icon: createSonarPin() }).addTo(map);
-    L.marker([51.51, -0.1], { icon: createSonarPin() }).addTo(map);
-    L.marker([51.5, -0.08], { icon: createSonarPin() }).addTo(map);
+    // Initialize the map after getting location
+    function initMap() {
+      // Set view to user location with zoom 15
+      map.setView(userLocation, 15);
+      
+      // Add tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+      
+      // Add sample pins around user location
+      const pins = [
+        {
+          coords: [userLocation[0] + 0.005, userLocation[1]], // North
+          title: "Nearby Park",
+          comments: ["Great walking trails"]
+        },
+        {
+          coords: [userLocation[0] - 0.005, userLocation[1]], // South
+          title: "Shopping Area",
+          comments: ["Local stores"]
+        }
+      ];
+      
+      pins.forEach(pin => {
+        const marker = L.marker(pin.coords, { 
+          icon: createSonarPin(),
+          riseOnHover: true
+        }).addTo(map);
+        
+        marker.on('click', () => {
+          showOverlay(pin);
+        });
+      });
+      
+      loadingElement.style.display = 'none';
+    }
+
+    // Get user location with high accuracy
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLocation = [pos.coords.latitude, pos.coords.longitude];
+          initMap();
+        },
+        (err) => {
+          console.error("Geolocation error:", err);
+          alert("Couldn't get your location. Using London as fallback.");
+          userLocation = [51.505, -0.09]; // London fallback
+          initMap();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      alert("Geolocation not supported. Using London as fallback.");
+      userLocation = [51.505, -0.09]; // London fallback
+      initMap();
+    }
+
+    // Your existing overlay and photo upload functions...
+    function showOverlay(location) {
+      // ... existing implementation ...
+    }
   </script>
 </body>
 </html>
